@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Simulador: Presupuesto familiar</title>
+<style>
+:root{
+  --bg:#f5f3ef; --card:#ffffff; --text:#2b2a28; --muted:#6b6862; --border:#e3dfd6;
+  --accent:#2f6b4f; --accent2:#c5703a; --danger:#b4342c; --ok:#2f6b4f; --warn:#c5703a;
+  --track:#e3dfd6;
+  color-scheme: light;
+  box-sizing:border-box;
+  padding-top: env(safe-area-inset-top,0px);
+  padding-bottom: env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#1c1b19; --card:#26241f; --text:#ece8e0; --muted:#a6a097; --border:#3a372f;
+    --accent:#6fae8c; --accent2:#e2975f; --danger:#e2726a; --ok:#6fae8c; --warn:#e2975f;
+    --track:#3a372f;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#1c1b19; --card:#26241f; --text:#ece8e0; --muted:#a6a097; --border:#3a372f;
+  --accent:#6fae8c; --accent2:#e2975f; --danger:#e2726a; --ok:#6fae8c; --warn:#e2975f;
+  --track:#3a372f; color-scheme: dark;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-apple-system,sans-serif;}
+.wrap{max-width:900px;margin:0 auto;padding:20px 16px 40px;}
+h1{font-size:1.4rem;margin:0 0 4px;}
+.sub{color:var(--muted);font-size:.92rem;margin:0 0 18px;line-height:1.4;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:16px;}
+.summary{display:flex;flex-wrap:wrap;gap:14px;align-items:center;}
+.summary .num{font-size:1.5rem;font-weight:700;}
+.summary .lbl{font-size:.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;}
+.bar-outer{width:100%;height:16px;background:var(--track);border-radius:8px;overflow:hidden;margin-top:10px;}
+.bar-inner{height:100%;border-radius:8px;transition:width .3s,background .3s;}
+.status{margin-top:10px;font-weight:700;padding:8px 12px;border-radius:8px;font-size:.95rem;}
+.status.ok{background:color-mix(in srgb, var(--ok) 18%, transparent);color:var(--ok);}
+.status.bad{background:color-mix(in srgb, var(--danger) 18%, transparent);color:var(--danger);}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;}
+.cat{border:1px solid var(--border);border-radius:12px;padding:12px;}
+.cat .top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;}
+.cat .name{font-weight:600;font-size:.9rem;}
+.cat .val{font-weight:700;color:var(--accent);}
+.cat input[type=range]{width:100%;accent-color:var(--accent);}
+.cat .range-lbl{display:flex;justify-content:space-between;font-size:.72rem;color:var(--muted);}
+.chart{display:flex;align-items:flex-end;gap:10px;height:160px;margin-top:6px;}
+.chart .colbar{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;}
+.chart .fill{width:100%;border-radius:6px 6px 0 0;background:var(--accent);transition:height .3s,background .3s;min-height:2px;}
+.chart .clbl{font-size:.68rem;color:var(--muted);margin-top:4px;text-align:center;}
+.events{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;}
+button.evt{background:var(--card);border:1px solid var(--accent2);color:var(--accent2);border-radius:10px;padding:10px 12px;font-size:.85rem;font-weight:600;cursor:pointer;text-align:left;}
+button.evt:disabled{opacity:.45;cursor:default;border-color:var(--border);color:var(--muted);}
+button#reset{background:var(--text);color:var(--bg);border:none;border-radius:10px;padding:10px 16px;font-weight:700;cursor:pointer;font-size:.85rem;}
+#log{font-size:.82rem;color:var(--muted);margin-top:10px;line-height:1.5;}
+#log div{margin-bottom:3px;}
+.q{border-left:3px solid var(--accent2);padding:6px 12px;margin-bottom:10px;font-size:.92rem;}
+footer{text-align:center;color:var(--muted);font-size:.75rem;margin-top:10px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>💰 Simulador: presupuesto de la familia Soto</h1>
+  <p class="sub">Familia de 4 personas · Ingreso mensual fijo: <strong>$900.000</strong>. Ajusta los gastos con los deslizadores y pon a prueba el presupuesto con eventos de alza de precios.</p>
+
+  <div class="card">
+    <div class="summary">
+      <div><div class="num" id="ingresoNum">$900.000</div><div class="lbl">Ingreso</div></div>
+      <div><div class="num" id="gastoNum">$0</div><div class="lbl">Gasto total</div></div>
+      <div><div class="num" id="saldoNum">$0</div><div class="lbl">Saldo</div></div>
+    </div>
+    <div class="bar-outer"><div class="bar-inner" id="barFill"></div></div>
+    <div class="status" id="statusBox"></div>
+  </div>
+
+  <div class="card">
+    <strong style="font-size:.9rem;">Gastos por categoría</strong>
+    <div class="grid" id="catGrid" style="margin-top:10px;"></div>
+  </div>
+
+  <div class="card">
+    <strong style="font-size:.9rem;">Gráfico de gastos</strong>
+    <div class="chart" id="chart"></div>
+  </div>
+
+  <div class="card">
+    <strong style="font-size:.9rem;">⚡ Eventos: sube un precio</strong>
+    <div class="events" id="events" style="margin-top:10px;"></div>
+    <div id="log"></div>
+    <button id="reset" style="margin-top:12px;">↺ Reiniciar simulación</button>
+  </div>
+
+  <div class="card">
+    <strong style="font-size:.95rem;">Para conversar en clase</strong>
+    <div style="margin-top:10px;">
+      <div class="q">1. ¿Qué gastos fueron los más difíciles de recortar cuando subió un precio? ¿Por qué?</div>
+      <div class="q">2. Cuando el presupuesto quedó en déficit, ¿qué decisiones tomaron? ¿Hay gastos que no se pueden recortar aunque suban (como el arriendo)?</div>
+      <div class="q">3. Si el ingreso de la familia no sube al mismo ritmo que los precios, ¿qué efecto tiene esto en su calidad de vida a largo plazo?</div>
+    </div>
+  </div>
+  <footer>Simulador educativo · Montos en pesos chilenos (CLP)</footer>
+</div>
+
+<script>
+const INCOME = 900000;
+const CATS = [
+  {key:'arriendo', label:'Arriendo', icon:'🏠', init:280000},
+  {key:'aliment', label:'Alimentación', icon:'🛒', init:220000},
+  {key:'transporte', label:'Transporte', icon:'🚌', init:60000},
+  {key:'cuentas', label:'Cuentas básicas', icon:'💡', init:90000},
+  {key:'educ', label:'Educación', icon:'🎒', init:80000},
+  {key:'salud', label:'Salud', icon:'🩺', init:50000},
+  {key:'ocio', label:'Ocio', icon:'🎬', init:40000},
+];
+let state = {};
+let maxVal = {};
+function initState(){
+  CATS.forEach(c=>{ state[c.key]=c.init; maxVal[c.key]=Math.round(c.init*2/5000)*5000; });
+}
+initState();
+
+const fmt = n => '$' + Math.round(n).toLocaleString('es-CL');
+
+function render(){
+  const grid = document.getElementById('catGrid');
+  grid.innerHTML = '';
+  CATS.forEach(c=>{
+    const v = state[c.key];
+    const div = document.createElement('div');
+    div.className='cat';
+    div.innerHTML = `
+      <div class="top"><span class="name">${c.icon} ${c.label}</span><span class="val" id="v_${c.key}">${fmt(v)}</span></div>
+      <input type="range" min="0" max="${maxVal[c.key]}" step="1000" value="${v}" id="s_${c.key}">
+      <div class="range-lbl"><span>$0</span><span>${fmt(maxVal[c.key])}</span></div>
+    `;
+    grid.appendChild(div);
+    div.querySelector('input').addEventListener('input', e=>{
+      state[c.key] = Number(e.target.value);
+      document.getElementById('v_'+c.key).textContent = fmt(state[c.key]);
+      update();
+    });
+  });
+  renderChart();
+  update();
+}
+
+function renderChart(){
+  const chart = document.getElementById('chart');
+  chart.innerHTML = '';
+  const topRef = Math.max(...CATS.map(c=>maxVal[c.key]));
+  CATS.forEach(c=>{
+    const col = document.createElement('div');
+    col.className='colbar';
+    col.innerHTML = `<div class="fill" id="bar_${c.key}" style="height:0%"></div><div class="clbl">${c.icon}<br>${c.label}</div>`;
+    chart.appendChild(col);
+  });
+  window.__topRef = topRef;
+}
+
+function update(){
+  let total = 0;
+  CATS.forEach(c=>{
+    total += state[c.key];
+    const pct = Math.min(100, (state[c.key]/window.__topRef)*100);
+    const bar = document.getElementById('bar_'+c.key);
+    if(bar){ bar.style.height = pct+'%'; bar.style.background = 'var(--accent)'; }
+  });
+  const saldo = INCOME - total;
+  document.getElementById('gastoNum').textContent = fmt(total);
+  document.getElementById('saldoNum').textContent = (saldo<0?'-':'') + fmt(Math.abs(saldo));
+  document.getElementById('saldoNum').style.color = saldo<0 ? 'var(--danger)' : 'var(--ok)';
+  const ratio = total/INCOME;
+  const fill = document.getElementById('barFill');
+  fill.style.width = Math.min(100, ratio*100)+'%';
+  fill.style.background = ratio>1 ? 'var(--danger)' : (ratio>0.9 ? 'var(--warn)' : 'var(--ok)');
+  const statusBox = document.getElementById('statusBox');
+  if(saldo<0){
+    statusBox.className='status bad';
+    statusBox.textContent = `⚠️ Presupuesto en déficit: faltan ${fmt(Math.abs(saldo))}. Hay que recortar algún gasto.`;
+  } else {
+    statusBox.className='status ok';
+    statusBox.textContent = saldo===0 ? '✅ Presupuesto exactamente equilibrado.' : `✅ Presupuesto equilibrado, con ${fmt(saldo)} disponibles.`;
+  }
+}
+
+const EVENTS = [
+  {id:'bencina', label:'⛽ Sube la bencina 20%', cat:'transporte', pct:0.20},
+  {id:'panleche', label:'🥖🥛 Suben el pan y la leche 15%', cat:'aliment', pct:0.15},
+  {id:'luz', label:'💡 Sube la cuenta de la luz 25%', cat:'cuentas', pct:0.25},
+  {id:'arriendo', label:'🏠 Reajuste del arriendo 10%', cat:'arriendo', pct:0.10},
+];
+function renderEvents(){
+  const box = document.getElementById('events');
+  box.innerHTML='';
+  EVENTS.forEach(ev=>{
+    const btn = document.createElement('button');
+    btn.className='evt'; btn.id='btn_'+ev.id; btn.textContent = ev.label;
+    btn.onclick = ()=>applyEvent(ev, btn);
+    box.appendChild(btn);
+  });
+}
+function applyEvent(ev, btn){
+  const cat = CATS.find(c=>c.key===ev.cat);
+  const before = state[ev.cat];
+  const after = Math.round(before*(1+ev.pct)/1000)*1000;
+  state[ev.cat] = after;
+  maxVal[ev.cat] = Math.max(maxVal[ev.cat], Math.round(after*1.8/5000)*5000);
+  document.getElementById('s_'+ev.cat).max = maxVal[ev.cat];
+  document.getElementById('s_'+ev.cat).value = after;
+  document.getElementById('v_'+ev.cat).textContent = fmt(after);
+  btn.disabled = true;
+  const log = document.getElementById('log');
+  const line = document.createElement('div');
+  line.textContent = `⚡ ${cat.label} subió de ${fmt(before)} a ${fmt(after)}.`;
+  log.prepend(line);
+  update();
+}
+
+document.getElementById('reset').onclick = ()=>{
+  initState();
+  render();
+  renderEvents();
+  document.getElementById('log').innerHTML='';
+};
+
+render();
+renderEvents();
+</script>
+</body>
+</html>
